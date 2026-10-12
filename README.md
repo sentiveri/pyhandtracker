@@ -1,67 +1,77 @@
 # Gesture Skeleton
 
-Bộ khung nhận diện cử chỉ tay qua webcam (MediaPipe + OpenCV). **Không có sẵn tính năng nào**
-(không play/pause, không chỉnh âm lượng...). Bạn tự gắn cử chỉ với hành động trong `actions.py`.
+**English** | [Tiếng Việt](README.vi.md)
 
-## Cài đặt
+A bare-bones hand gesture framework for your webcam (MediaPipe + OpenCV). It ships with
+**no built-in features** (no play/pause, no volume control...). You bind gestures to your own
+actions in `actions.py`.
 
-1. Cài [Python](https://www.python.org/downloads/) 3.10 - 3.12.
+## Setup
+
+1. Install [Python](https://www.python.org/downloads/) 3.10 - 3.12.
 2. `pip install -r requirements.txt`
-3. Cần file `hand_landmarker.task` cùng thư mục với `main.py`
-   ([tải ở đây](https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/latest/hand_landmarker.task)).
+3. Put `hand_landmarker.task` next to `main.py`
+   ([download](https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/latest/hand_landmarker.task)).
 4. `python main.py`
 
-Mặc định `actions.py` chỉ có 2 demo in ra console (nắm tay, pinch kéo) để bạn thấy nó hoạt động.
+By default `actions.py` only contains two demos that print to the console (fist, pinch-drag),
+so you can see gestures being detected.
 
-## Thêm hành động
+## Adding actions
 
-Chỉ sửa **`actions.py`**:
+Edit **`actions.py`** only:
 
 ```python
 import pyautogui
 from registry import hold, drag, while_pose
 
-@hold("fist", seconds=0.6)          # giữ nắm tay 0.6s -> gọi 1 lần
+@hold("fist", seconds=0.6)          # hold a fist for 0.6s -> called once
 def play_pause():
     pyautogui.press("playpause")
 
-@drag("pinch", axis="y")            # chụm tay + kéo lên/xuống -> steps (+ = lên)
+@drag("pinch", axis="y")            # pinch + move hand -> steps (+ = up)
 def volume(steps):
     pyautogui.press("volumeup" if steps > 0 else "volumedown", presses=abs(steps))
 
-@while_pose("open")                 # gọi mỗi frame khi đang xoè tay
+@while_pose("open")                 # called every frame while the hand is open
 def track(hand):
-    print(hand.x, hand.y)           # 0..1, đã lọc mượt
+    print(hand.x, hand.y)           # 0..1, smoothed
 ```
 
-| Decorator | Khi nào gọi | Tham số của hàm |
+| Decorator | Called when | Function argument |
 |---|---|---|
-| `@hold(pose, seconds=0.6, cooldown=1.0)` | giữ cử chỉ đủ lâu, thả tay mới bắn lại | không có |
-| `@drag(pose, axis="y", step=0.35, max_steps=5)` | giữ cử chỉ và di chuyển tay | `steps` (số nguyên có dấu; `y`: + là lên, `x`: + là sang phải) |
-| `@while_pose(pose="any")` | mỗi frame khi đang ở cử chỉ đó (`"any"` = mọi cử chỉ) | `hand` |
+| `@hold(pose, seconds=0.6, cooldown=1.0)` | the pose is held long enough; release to fire again | none |
+| `@drag(pose, axis="y", step=0.35, max_steps=5)` | the pose is held while the hand moves | `steps` (signed int; `y`: + is up, `x`: + is right) |
+| `@while_pose(pose="any")` | every frame while in that pose (`"any"` = any pose) | `hand` |
 
-Các `pose`: `pinch`, `thumbs_up`, `fist`, `peace`, `point_right`, `point_left`, `open`, `other`.
+Available poses: `pinch`, `thumbs_up`, `fist`, `peace`, `point_right`, `point_left`, `open`, `other`.
 
-`hand` có: `x`, `y`, `size`, `pose`, `index` (0 = tay trái màn hình) và `landmarks` (21 điểm MediaPipe,
-dùng để tự tính cử chỉ riêng). Lỗi trong action sẽ được log ra, không làm sập chương trình.
+`hand` provides `x`, `y`, `size`, `pose`, `index` (0 = leftmost hand on screen) and `landmarks`
+(the 21 MediaPipe points, for writing your own gestures). Errors inside an action are logged and
+never crash the program.
 
-## Phím tắt
+## Keys
 
-`1` / `2` / `3`: đổi camera (laptop / USB / URL) · `u`: nhập URL · `m`: đổi kiểu hiển thị · `q`: thoát
+`1` / `2` / `3`: switch camera (laptop / USB / URL) · `u`: enter URL · `m`: change display mode · `q`: quit
 
 ## Camera
 
-- Số camera chỉnh ở `config.py` (`LAPTOP_CAM`, `USB_CAM`). Trên Windows, OBS Virtual Camera và DroidCam
-  cũng chiếm một số thứ tự, nên nếu ra nhầm camera thì đổi số hoặc tắt chúng.
-- Điện thoại làm camera qua DroidCam + cáp USB: bật USB debugging, rồi chạy
-  `adb forward tcp:4747 tcp:4747` và bấm `3`. Chạy lại lệnh này mỗi lần rút/cắm cáp.
+- Camera indexes are set in `config.py` (`LAPTOP_CAM`, `USB_CAM`). On Windows, virtual cameras such as
+  OBS Virtual Camera or DroidCam take up an index too, so if you get the wrong camera, change the
+  index or turn them off.
+- Using a phone as a camera via DroidCam over USB: enable USB debugging, run
+  `adb forward tcp:4747 tcp:4747`, then press `3`. Re-run the command each time you replug the cable.
 
-## Cấu trúc
+## Project layout
 
-| File | Vai trò |
+| File | Role |
 |---|---|
-| `actions.py` | **gắn cử chỉ -> hành động (file bạn sửa)** |
-| `registry.py` | các decorator `hold` / `drag` / `while_pose` |
-| `gestures.py` | nhận diện cử chỉ, lọc nhiễu, chạy các binding |
-| `camera.py`, `display.py`, `main.py` | đọc camera, vẽ HUD, vòng lặp chính |
-| `config.py` | ngưỡng nhận diện, camera |
+| `actions.py` | **bind gestures to actions (the file you edit)** |
+| `registry.py` | the `hold` / `drag` / `while_pose` decorators |
+| `gestures.py` | gesture detection, filtering, running the bindings |
+| `camera.py`, `display.py`, `main.py` | camera reader, HUD drawing, main loop |
+| `config.py` | detection thresholds, cameras |
+
+## Credits & license
+
+The `hand_landmarker.task` model is from Google MediaPipe (Apache 2.0). Code is released under the [MIT License](LICENSE).
