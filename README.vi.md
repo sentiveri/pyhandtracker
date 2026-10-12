@@ -1,4 +1,4 @@
-# Gesture Skeleton
+# GESTURE TRACKER
 
 [English](README.md) | **Tiếng Việt**
 
