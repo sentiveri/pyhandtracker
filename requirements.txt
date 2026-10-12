@@ -1,0 +1,4 @@
+opencv-python
+mediapipe
+numpy
+# pyautogui   # bỏ comment nếu action của bạn cần gửi phím/chuột
